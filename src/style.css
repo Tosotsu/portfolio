@@ -1,0 +1,1665 @@
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #000000;                        /* Pitch black — deep space atmosphere */
+  --text: rgba(255, 255, 255, 0.75);    /* Slightly muted white for most UI labels */
+  --accent: #ffffff;                    /* Pure white for emphasis elements */
+  --accent-red: #c0392b;               /* God of War crimson — used for first-letter accents */
+  --font-mono: 'Space Mono', 'IBM Plex Mono', 'Courier New', monospace;
+  --font-display: 'Cinzel Decorative', 'Cinzel', serif; /* Epic carved-stone display font */
+  --font-nav: 'Raleway', 'Space Mono', sans-serif;     /* Clean wide-tracked nav/labels */
+
+  /* Layout constants */
+  --ui-padding: 32px;                   /* Consistent edge padding for all corners */
+  --ui-padding-mobile: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESET + BASE
+   ═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  /* Manual scroll only — no smooth/programmatic easing (felt like auto-scroll) */
+  scroll-behavior: auto;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  /* 2200vh = total scroll distance for the 6 narrative beats
+     (intro · unravel · hand · sky · cards · void). Tall enough for cinematic
+     dwell + readable text, but trimmed so mobile users aren't scrolling forever.
+     Must match the ScrollTrigger end in ScrollTimeline.js. */
+  height: 2200vh;
+  overflow-x: hidden;
+  /* Prevent flash of unstyled content before JS loads */
+  visibility: hidden;
+}
+
+/* JS removes this class once scene is initialized */
+body.scene-ready {
+  visibility: visible;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WEBGL CANVAS
+   ═══════════════════════════════════════════════════════════════ */
+#webgl {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;             /* Behind all UI overlays */
+  display: block;         /* Removes inline-block bottom gap */
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UI OVERLAY CONTAINER
+   ═══════════════════════════════════════════════════════════════ */
+.ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 10;
+  /* None of the container receives mouse events — only
+     specific children that need interaction get pointer-events: all */
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SHARED LABEL STYLE
+   Small UI labels: Raleway wide-tracked all-caps
+   ═══════════════════════════════════════════════════════════════ */
+.ui-label {
+  font-family: var(--font-nav);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CORNER ANCHORS
+   Four corners of the viewport, each has its own content
+   ═══════════════════════════════════════════════════════════════ */
+.ui-corner {
+  position: absolute;
+  display: flex;
+  align-items: center;
+}
+
+.ui-top-left {
+  top: 22px;
+  left: var(--ui-padding);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ui-top-right {
+  top: 22px;
+  right: var(--ui-padding);
+}
+
+.ui-bottom-left {
+  bottom: 22px;
+  left: var(--ui-padding);
+}
+
+.ui-bottom-right {
+  bottom: 22px;
+  right: var(--ui-padding);
+  gap: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NAME WORDMARK (top left)
+   ═══════════════════════════════════════════════════════════════ */
+.ui-name {
+  font-family: var(--font-nav);
+  font-size: clamp(12px, 1.5vw, 15px);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;          /* compensate trailing tracking → centred */
+  color: var(--accent);
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow:
+    0 0 8px  rgba(255, 255, 255, 0.55),
+    0 0 22px rgba(255, 255, 255, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   "LET'S TALK" PILL BUTTON (top right)
+   pointer-events: all — this one IS interactive
+   ═══════════════════════════════════════════════════════════════ */
+.btn-talk {
+  /* God of War angular bracket-style button */
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 0;               /* Square corners — angular, not pill */
+  padding: clamp(9px, 1.2vw, 11px) clamp(18px, 2.6vw, 30px);
+  font-family: var(--font-nav);
+  font-size: clamp(9px, 1.1vw, 11px);
+  font-weight: 700;
+  letter-spacing: clamp(0.2em, 0.35vw, 0.35em);
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: all;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.95);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.5),
+    0 0 26px rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 0 18px rgba(255, 255, 255, 0.08),
+    inset 0 0 14px rgba(255, 255, 255, 0.04);
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease,
+              box-shadow 0.3s ease, text-shadow 0.3s ease;
+  outline: none;
+  position: relative;
+}
+
+/* Corner accent marks — mimics the GoW bracket ornament */
+.btn-talk::before,
+.btn-talk::after {
+  content: '◆';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.3s ease;
+}
+.btn-talk::before { left: 8px; }
+.btn-talk::after  { right: 8px; }
+
+.btn-talk:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 1.0);
+  border-color: rgba(255, 255, 255, 1);
+  text-shadow:
+    0 0 14px rgba(255, 255, 255, 0.85),
+    0 0 40px rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 0 28px rgba(255, 255, 255, 0.22),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.btn-talk:hover::before,
+.btn-talk:hover::after {
+  color: var(--accent-red);
+}
+
+.btn-talk:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLL HINT (center screen)
+   Glowing pulsing "SCROLL TO EXPLORE" — fades out at ~5% scroll
+   ═══════════════════════════════════════════════════════════════ */
+#scroll-hint {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-nav);
+  font-size: clamp(16px, 2vw, 28px);     /* much bigger */
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  color: #ffffff;
+
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.92),        /* dark contrast → pops hard */
+    0 0 3px  rgba(0, 0, 0, 0.96),
+    0 0 12px rgba(255, 255, 255, 1.0),
+    0 0 30px rgba(255, 255, 255, 0.65),
+    0 0 70px rgba(255, 255, 255, 0.35),
+    0 0 130px rgba(255, 255, 255, 0.18);
+
+  opacity: 1;                            /* no pulse/blink — steady */
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1.0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PHASE TEXT (general reusable class for phase 1 + 3 subtitles)
+   ═══════════════════════════════════════════════════════════════ */
+.ui-phase-text {
+  position: absolute;
+  opacity: 0;             /* Hidden by default — GSAP reveals on scroll */
+}
+
+#phase1-text {
+  bottom: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-nav);
+  font-size: clamp(16px, 2.2vw, 30px);   /* much bigger */
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  color: #ffffff;
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.92),        /* dark contrast → pops hard */
+    0 0 3px  rgba(0, 0, 0, 0.96),
+    0 0 12px rgba(255, 255, 255, 0.85),
+    0 0 30px rgba(255, 255, 255, 0.5),
+    0 0 70px rgba(255, 255, 255, 0.25);
+}
+
+#step-text {
+  left: var(--ui-padding);
+  bottom: 30%;
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.2vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-shadow:
+    0 0 8px  rgba(255, 168, 48, 0.85),
+    0 0 22px rgba(255, 130, 10, 0.45),
+    0 0 50px rgba(255, 100, 0,  0.20);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOCK-IN STATEMENT (revealed before the hand morph)
+   Centered display line, slowly eased in on scroll via GSAP.
+   ═══════════════════════════════════════════════════════════════ */
+#lockin-text {
+  position: absolute;
+  top: 28%;                /* sits above the valley, near the horizon band */
+  left: 65%;
+  transform: translate(-50%, -50%);
+  width: min(80vw, 760px);
+  text-align: center;
+
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.2vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+
+  color: #ffffff;
+  text-shadow:
+    0 0 8px  rgba(255, 168, 48, 0.85),
+    0 0 22px rgba(255, 130, 10, 0.45),
+    0 0 50px rgba(255, 100, 0,  0.20);
+
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   "CRAFT" LARGE DISPLAY TEXT (phase 2)
+   Huge monospaced word, right side of screen
+   ═══════════════════════════════════════════════════════════════ */
+#craft-text {
+  position: absolute;
+  right: 7%;
+  top: 22%;                /* raised toward the horizon — reads as part of the
+                              sky above the valley, beside the hand on the left */
+
+  font-size: clamp(38px, 5vw, 74px);   /* smaller */
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: 0.08em;   /* Cinzel has tight built-in spacing */
+
+  opacity: 0;
+  transform-origin: right center;
+
+  /* First letter crimson like God of War "K" — applied via JS or pseudo */
+  color: #ffffff;
+
+  /* Strong layered white halo so the word reads as LIGHT emitting from the
+     particle field — tight core glow + wide soft bloom. This is the key to
+     the reference "glowing text floating over terrain" look. */
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.9),         /* dark contrast → pops off the field */
+    0 0 3px   rgba(0, 0, 0, 0.95),
+    0 0 6px   rgba(255, 255, 255, 0.95),
+    0 0 16px  rgba(255, 255, 255, 0.75),
+    0 0 42px  rgba(255, 255, 255, 0.5),
+    0 0 90px  rgba(255, 255, 255, 0.3),
+    0 0 160px rgba(200, 60, 40, 0.18);   /* faint warm outer halo */
+
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AWARDS BLOCK (phase 3)
+   Stacked credential lines, left side, fades in during canyon
+   ═══════════════════════════════════════════════════════════════ */
+#award-text {
+  position: absolute;
+  right: var(--ui-padding);   /* moved to the RIGHT — hand now sits on the left */
+  top: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 12px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.award-line {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.2vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-shadow:
+    0 0 8px  rgba(255, 168, 48, 0.85),
+    0 0 22px rgba(255, 130, 10, 0.45),
+    0 0 50px rgba(255, 100, 0,  0.20);
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BRAND CONSTELLATION SKY (phase 4 — camera pans up)
+   Scattered glowing brand names like stars + a closing statement.
+   ═══════════════════════════════════════════════════════════════ */
+#brands-sky {
+  position: absolute;
+  inset: 0;
+  opacity: 0;                 /* GSAP reveals during the upward pan */
+  pointer-events: none;
+  /* NO overflow:hidden — it was clipping star names off-screen on mobile. */
+}
+
+.brand-star {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.2vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+  max-width: 44vw;
+  color: #ffffff;
+  background: none;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  text-shadow:
+    0 0 8px  rgba(255, 168, 48, 0.85),
+    0 0 22px rgba(255, 130, 10, 0.45),
+    0 0 50px rgba(255, 100, 0,  0.20);
+}
+
+#brands-sky .char {
+  animation: none !important;
+  filter: none !important;
+  transform: none !important;
+  text-shadow:
+    0 0 8px  rgba(255, 168, 48, 0.85),
+    0 0 22px rgba(255, 130, 10, 0.45) !important;
+}
+
+.brand-statement {
+  position: absolute;
+  right: 8%;
+  bottom: 16%;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(12px, 1.2vw, 16px);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-shadow:
+    0 0 8px  rgba(255, 168, 48, 0.85),
+    0 0 22px rgba(255, 130, 10, 0.45),
+    0 0 50px rgba(255, 100, 0,  0.20);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CARD CORRIDOR (beat 5)
+   Project cards float in the dark centre between the two faded terrain
+   walls. GSAP reveals #cards opacity + staggers each .project-card.
+   ═══════════════════════════════════════════════════════════════ */
+/* Full-screen layer; cards are stacked + centered so the scroll shows ONE
+   card at a time (zoom in → out). GSAP owns each card's centering transform. */
+#cards {
+  position: absolute;
+  inset: 0;
+  opacity: 0;                 /* GSAP reveals during the card beat */
+  pointer-events: none;
+}
+
+/* ─── MAIN PROJECT CARD (SAMUR.AI-style) ──────────────────────────
+   GSAP owns .project-card transform (xPercent/yPercent + x sweep).
+   .card-inner is a child that tilts in 3D on cursor — no GSAP conflict.
+   Floating tech badges + metric satellite live INSIDE .card-inner. */
+.project-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* centering owned by GSAP (xPercent/yPercent) — no CSS transform here */
+  width: clamp(220px, 26vw, 290px);
+  aspect-ratio: 9 / 16;       /* whole card is portrait video frame */
+  text-align: left;
+  opacity: 0;
+  perspective: 1200px;        /* gives the inner 3D tilt depth */
+  color: var(--card-accent, #ffffff);
+  pointer-events: none;       /* GSAP toggles to 'auto' during active window */
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;                 /* hero edge-to-edge */
+  overflow: visible;          /* satellites bleed past edges */
+  transform-style: preserve-3d;
+  transform:
+    rotateY(calc(var(--mx, 0) * 14deg))
+    rotateX(calc(var(--my, 0) * -14deg))
+    translateZ(var(--lift, 0px))
+    scale(var(--scale, 1));
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.45s ease,
+    border-color 0.45s ease;
+  will-change: transform;
+  pointer-events: none;       /* GSAP flips to 'auto' during active card window */
+  cursor: pointer;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.05), transparent 60%),
+    rgba(14, 14, 18, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Hover lift — card pulls forward, scales up, accent glow */
+.card-inner:hover {
+  --lift: 24px;
+  --scale: 1.035;
+  border-color: color-mix(in srgb, var(--card-accent) 55%, rgba(255,255,255,0.15));
+  box-shadow:
+    0 50px 120px rgba(0, 0, 0, 0.7),
+    0 0 80px color-mix(in srgb, var(--card-accent) 30%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--card-accent) 35%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.card-inner:hover .tech-badge { transform: translateZ(64px); }
+.card-inner:hover .sat-metric { transform: translateZ(86px); }
+.card-inner:hover .card-hero  { transform: translateZ(38px); }
+
+/* Subtle dot grid like reference */
+.card-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 14px 14px;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+/* TOP-RIGHT CATEGORY MINI-CARD — square-ish glass tile, bleeds past corner.
+   Width auto-fits longest word; min keeps it ~square. */
+.card-tag {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: max-content;
+  max-width: 128px;
+  min-height: 72px;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: left;
+  border-radius: 12px;
+  font-family: var(--font-nav);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 8px color-mix(in srgb, var(--card-accent) 30%, transparent);
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--card-accent) 22%, rgba(28, 28, 34, 0.92)),
+      rgba(14, 14, 18, 0.92));
+  border: 1px solid color-mix(in srgb, var(--card-accent) 38%, rgba(255, 255, 255, 0.14));
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.6),
+    0 0 26px color-mix(in srgb, var(--card-accent) 22%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateZ(48px);
+  z-index: 4;
+}
+/* SVG icon at top of card-tag */
+.card-tag .tag-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--card-accent);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--card-accent) 70%, transparent));
+  flex-shrink: 0;
+}
+.card-tag .tag-label {
+  display: block;
+  line-height: 1.2;
+}
+
+/* Accent dot bottom-right of mini-card */
+.card-tag::after {
+  content: '';
+  align-self: flex-end;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--card-accent);
+  box-shadow: 0 0 10px var(--card-accent);
+  animation: dotPulse 1.6s ease-in-out infinite;
+}
+
+/* HERO — fills entire card (9:16 portrait) */
+.card-hero {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 60% at 50% 40%,
+      color-mix(in srgb, var(--card-accent) 14%, transparent),
+      transparent 70%),
+    linear-gradient(180deg, rgba(22, 22, 28, 0.7), rgba(8, 8, 12, 0.7));
+  color: var(--card-accent);
+  transform: translateZ(0);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 -40px 80px color-mix(in srgb, var(--card-accent) 8%, transparent);
+}
+
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: transparent;
+}
+
+/* Top + bottom edge fade so video blends into the card */
+.card-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.25) 0%, transparent 18%, transparent 78%, rgba(0,0,0,0.45) 100%);
+}
+
+/* BOTTOM-LEFT TITLE MINI-CARD — index + title + tagline, bleeds past corner */
+.title-card {
+  position: absolute;
+  bottom: -22px;
+  left: -22px;
+  min-width: 130px;
+  max-width: 200px;
+  padding: 10px 12px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-radius: 12px;
+  font-family: var(--font-nav);
+  background:
+    linear-gradient(160deg, rgba(40, 40, 48, 0.92), rgba(18, 18, 24, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    0 20px 44px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 4;
+  transform: translateZ(72px);
+}
+
+.card-index {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: color-mix(in srgb, var(--card-accent) 80%, #ffffff);
+  margin: 0;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--card-accent) 50%, transparent);
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  color: #ffffff;
+  margin: 0;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 10px color-mix(in srgb, var(--card-accent) 30%, transparent);
+  word-break: keep-all;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+
+.card-desc {
+  font-family: var(--font-nav);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  word-break: keep-all;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+
+/* Accent dot pulse — used inside other mini-cards too */
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.1); }
+}
+
+/* ─── INDIVIDUAL TECH BADGES (floating mini-cards) ──────────────── */
+.tech-badge {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  font-family: var(--font-nav);
+  background: linear-gradient(160deg, rgba(34,34,42,0.92), rgba(14,14,18,0.92));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  z-index: 3;
+  white-space: nowrap;
+  transform: translateZ(40px);
+}
+.tech-badge .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--card-accent);
+  box-shadow: 0 0 8px var(--card-accent);
+  animation: dotPulse 1.6s ease-in-out infinite;
+}
+.tech-badge b {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffffff;
+  font-style: normal;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.85),
+    0 0 6px color-mix(in srgb, var(--card-accent) 35%, transparent);
+}
+.tech-badge i {
+  font-size: 9px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Per-badge anchor — scatter around the card edge */
+.tech-badge.tb-1 { top: -14px;  left: 10%; }
+.tech-badge.tb-2 { top: 30%;    right: -34px; }
+.tech-badge.tb-3 { bottom: 22%; left: -34px; }
+.tech-badge.tb-4 { top: 62%;    right: -34px; }
+
+/* Tiny SVG icon inside a tech badge (e.g. blockchain) */
+.tech-badge .badge-icon {
+  width: 11px;
+  height: 11px;
+  color: var(--card-accent);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--card-accent) 70%, transparent));
+  flex-shrink: 0;
+}
+
+/* ─── METRIC SATELLITE (bottom-right, accent-tinted) ───────────── */
+.sat-metric {
+  position: absolute;
+  bottom: -22px;
+  right: -26px;
+  padding: 10px 12px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 12px;
+  font-family: var(--font-nav);
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--card-accent) 22%, rgba(28,28,34,0.9)),
+      rgba(18,18,24,0.9));
+  border: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  z-index: 3;
+  transform: translateZ(60px);
+}
+.sat-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.sat-label em { font-style: normal; color: rgba(255,255,255,0.5); }
+.sat-foot {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.78);
+}
+.sat-glyph {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--card-accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--card-accent) 60%, transparent);
+}
+
+
+/* ─── PER-PROJECT HERO ANIMATIONS ──────────────────────────────── */
+/* Shared: thin strokes, current accent color via `color: var(--card-accent)` */
+.hero-svg [stroke], .hero-svg path, .hero-svg line, .hero-svg rect, .hero-svg circle {
+  vector-effect: non-scaling-stroke;
+}
+
+/* 01 RAG — PDF lines pulse, beam flows, checks tick on sequentially */
+[data-project="rag"] .hero-doc {
+  fill: none; stroke: currentColor; stroke-width: 1.3; opacity: 0.85;
+}
+[data-project="rag"] .hero-doc-fold {
+  fill: currentColor; opacity: 0.25;
+}
+[data-project="rag"] .hero-line {
+  stroke: currentColor; stroke-width: 1.5; opacity: 0.5;
+  stroke-linecap: round;
+  animation: ragLine 2.8s ease-in-out infinite;
+}
+[data-project="rag"] .hero-line.l2 { animation-delay: -0.4s; }
+[data-project="rag"] .hero-line.l3 { animation-delay: -0.8s; }
+[data-project="rag"] .hero-line.l4 { animation-delay: -1.2s; }
+@keyframes ragLine {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.9; }
+}
+[data-project="rag"] .hero-beam {
+  fill: none; stroke: currentColor; stroke-width: 1.4;
+  stroke-dasharray: 6 6;
+  animation: ragBeam 1.6s linear infinite;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+@keyframes ragBeam {
+  to { stroke-dashoffset: -24; }
+}
+[data-project="rag"] .chk {
+  fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.6;
+}
+[data-project="rag"] .tick {
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 24; stroke-dashoffset: 24;
+  animation: ragTick 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+[data-project="rag"] .tick.t2 { animation-delay: 0.4s; }
+[data-project="rag"] .tick.t3 { animation-delay: 0.8s; }
+@keyframes ragTick {
+  0%, 30%  { stroke-dashoffset: 24; }
+  55%, 90% { stroke-dashoffset: 0; }
+  100%     { stroke-dashoffset: 24; }
+}
+
+/* 02 P-Tracker — viewfinder, person, crosshair sweep, network pulses */
+[data-project="ptrack"] .vf-corners path {
+  fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: square;
+}
+[data-project="ptrack"] .vf-box {
+  fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.25;
+  stroke-dasharray: 4 4;
+  animation: vfBox 4s linear infinite;
+}
+@keyframes vfBox { to { stroke-dashoffset: -32; } }
+[data-project="ptrack"] .person {
+  fill: currentColor; opacity: 0.85;
+}
+[data-project="ptrack"] .cross-h,
+[data-project="ptrack"] .cross-v {
+  stroke: currentColor; stroke-width: 0.8; opacity: 0.5;
+  animation: crossSweep 2.4s ease-in-out infinite;
+}
+[data-project="ptrack"] .cross-v { animation-delay: -1.2s; }
+@keyframes crossSweep {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 0.7; }
+}
+[data-project="ptrack"] .net-nodes circle {
+  fill: currentColor;
+  animation: nodePulse 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+[data-project="ptrack"] .n2 { animation-delay: -0.3s; }
+[data-project="ptrack"] .n3 { animation-delay: -0.6s; }
+[data-project="ptrack"] .n4 { animation-delay: -0.9s; }
+@keyframes nodePulse {
+  0%, 100% { transform: scale(0.7); opacity: 0.4; }
+  50%      { transform: scale(1.2); opacity: 1; }
+}
+[data-project="ptrack"] .net-nodes circle { transform-box: fill-box; transform-origin: center; }
+[data-project="ptrack"] .net-links line {
+  stroke: currentColor; stroke-width: 1; opacity: 0.5;
+  stroke-dasharray: 3 3;
+  animation: netLink 1.5s linear infinite;
+}
+@keyframes netLink { to { stroke-dashoffset: -12; } }
+
+/* 03 Gold — chart draws upward, dot pulses */
+[data-project="gold"] .grid line {
+  stroke: currentColor; stroke-width: 0.5; opacity: 0.12;
+}
+[data-project="gold"] .axis {
+  stroke: currentColor; stroke-width: 1; opacity: 0.45;
+}
+[data-project="gold"] .line-area {
+  fill: currentColor; opacity: 0.12;
+}
+[data-project="gold"] .line-chart {
+  fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 260; stroke-dashoffset: 260;
+  animation: chartDraw 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+@keyframes chartDraw {
+  0%       { stroke-dashoffset: 260; }
+  60%, 90% { stroke-dashoffset: 0; }
+  100%     { stroke-dashoffset: 260; }
+}
+[data-project="gold"] .line-dot {
+  fill: currentColor;
+  filter: drop-shadow(0 0 8px currentColor);
+  animation: dotPulse 1.4s ease-in-out infinite;
+  transform-box: fill-box; transform-origin: center;
+}
+[data-project="gold"] .up-arrow {
+  fill: currentColor;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  filter: drop-shadow(0 0 4px currentColor);
+  opacity: 0.85;
+}
+
+/* 04 Phishing — shield, radar sweep, chain links */
+[data-project="phish"] .shield {
+  fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.85;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+[data-project="phish"] .radar-ring {
+  fill: none; stroke: currentColor; stroke-width: 0.8; opacity: 0.35;
+}
+[data-project="phish"] .radar-sweep {
+  transform-origin: 0 0;
+  animation: radarSpin 2.4s linear infinite;
+  color: var(--card-accent);
+  opacity: 0.9;
+}
+@keyframes radarSpin {
+  to { transform: rotate(360deg); }
+}
+[data-project="phish"] .chain-link {
+  fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0.7;
+  animation: chainPulse 1.8s ease-in-out infinite;
+}
+[data-project="phish"] .chain-link:nth-child(2) { animation-delay: -0.4s; }
+[data-project="phish"] .chain-link:nth-child(3) { animation-delay: -0.8s; }
+[data-project="phish"] .chain-link:nth-child(4) { animation-delay: -1.2s; }
+@keyframes chainPulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+}
+
+/* 05 Fresherman — vault dial rotates, fingerprint scan line */
+[data-project="vault"] .vault-body {
+  fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0.6;
+}
+[data-project="vault"] .vault-dial-outer,
+[data-project="vault"] .vault-dial-inner {
+  fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0.85;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+[data-project="vault"] .vault-dial-outer {
+  stroke-dasharray: 30 14;
+  transform-origin: 120px 80px;
+  animation: dialSpin 6s linear infinite;
+}
+@keyframes dialSpin { to { transform: rotate(360deg); } }
+[data-project="vault"] .vault-spokes line {
+  stroke: currentColor; stroke-width: 1.2; opacity: 0.6;
+}
+[data-project="vault"] .fp path {
+  fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.85;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+[data-project="vault"] .scan-line {
+  stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 10px currentColor);
+  animation: scanY 2.4s ease-in-out infinite;
+}
+@keyframes scanY {
+  0%, 100% { transform: translateY(-10px); opacity: 0.3; }
+  50%      { transform: translateY(10px);  opacity: 1; }
+}
+
+/* Card-section text: dark contrast outline + accent glow */
+.project-card .char {
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.95),
+    0 0 2px  rgba(0, 0, 0, 0.98) !important;
+  animation: none !important;
+  filter: none !important;
+}
+.project-card .card-title {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 2px  rgba(0, 0, 0, 0.95),
+    0 0 12px color-mix(in srgb, var(--card-accent) 32%, transparent) !important;
+  animation: none !important;
+  filter: none !important;
+}
+.project-card .card-desc {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 2px  rgba(0, 0, 0, 0.95) !important;
+  animation: none !important;
+  filter: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FINAL STATEMENT (beat 6 — the void)
+   Center screen, large, contemplative
+   ═══════════════════════════════════════════════════════════════ */
+#final-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 96vw;
+
+  font-size: clamp(22px, 4.2vw, 64px);
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  text-transform: uppercase;
+
+  opacity: 0;
+  color: #ffffff;
+  text-shadow:
+    0 0 8px  rgba(255, 255, 255, 0.9),
+    0 0 22px rgba(255, 255, 255, 0.5),
+    0 0 50px rgba(255, 255, 255, 0.25);
+
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SOCIAL LINKS (bottom left)
+   ═══════════════════════════════════════════════════════════════ */
+.social-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;              /* Horizontal spacing between links */
+}
+
+.social-link {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  pointer-events: all;    /* Enable click on links */
+  transition: color 0.25s ease, text-shadow 0.25s ease;
+  position: relative;
+  text-shadow:
+    0 0 8px  rgba(255, 255, 255, 0.4),
+    0 0 22px rgba(255, 255, 255, 0.18);
+}
+
+/* Underline grows on hover using pseudo-element */
+.social-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.6);
+  transition: width 0.25s ease;
+}
+
+.social-link:hover {
+  color: rgba(255, 255, 255, 1);
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.8),
+    0 0 28px rgba(255, 255, 255, 0.45),
+    0 0 60px rgba(255, 255, 255, 0.25);
+}
+
+.social-link:hover::after {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLL INDICATOR (bottom right)
+   Simple dash/tick that alternates — pure CSS, no JS needed
+   ═══════════════════════════════════════════════════════════════ */
+/* Thin line scroll-progress bar (sits left of the mute button) */
+#scroll-progress {
+  width: clamp(60px, 10vw, 110px);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+#scroll-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 0 8px  rgba(255, 255, 255, 0.7),
+    0 0 18px rgba(255, 255, 255, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MUTE TOGGLE BUTTON (bottom right)
+   Minimal, no border — just an icon
+   ═══════════════════════════════════════════════════════════════ */
+.btn-mute {
+  /* Big square box, bright pulsing glow → stands out clearly */
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0;                 /* perfect square */
+  cursor: pointer;
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;                     /* square (25% smaller) */
+  padding: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;                  /* logo (25% smaller) */
+  line-height: 1;
+  letter-spacing: 0;                /* override ui-label's 0.25em → glyph centers */
+  outline: none;
+  /* Pulses bright → dim, but the dim state is still fully clear/visible. */
+  animation: mutePulse 1.9s ease-in-out infinite;
+}
+
+/* Hover pauses the pulse and locks to the bright state */
+.btn-mute:hover {
+  animation: none;
+  color: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 1);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 30px rgba(255, 255, 255, 0.55),
+    inset 0 0 18px rgba(255, 255, 255, 0.14);
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.95),
+    0 0 36px rgba(255, 255, 255, 0.5);
+}
+
+/* Glyph perfectly centered — kill the inherited ui-label letter-spacing
+   (0.25em trailing space was pushing the single glyph left of center). */
+#mute-icon {
+  display: block;
+  line-height: 1;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+@keyframes mutePulse {
+  0%, 100% {
+    border-color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 0 10px rgba(255, 255, 255, 0.14),
+      inset 0 0 10px rgba(255, 255, 255, 0.05);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 1);
+    color: rgba(255, 255, 255, 1);
+    box-shadow:
+      0 0 28px rgba(255, 255, 255, 0.6),
+      inset 0 0 18px rgba(255, 255, 255, 0.14);
+    text-shadow:
+      0 0 18px rgba(255, 255, 255, 0.95),
+      0 0 38px rgba(255, 255, 255, 0.55);
+  }
+}
+
+.btn-mute:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 3px;
+}
+
+/* Muted state dims the icon further */
+.btn-mute.is-muted {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FIRST LETTER CRIMSON ACCENT (God of War style)
+   ═══════════════════════════════════════════════════════════════ */
+.first-letter {
+  color: var(--accent-red);
+  text-shadow:
+    0 0 20px rgba(192, 57, 43, 0.6),
+    0 0 40px rgba(192, 57, 43, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   "LET'S TALK" + NAV BUTTONS — God of War ornate border style
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════
+   ENTER / LOADING SCREEN — God of War minimal style
+   Full-opacity overlay. Fades out on ENTER click.
+   ═══════════════════════════════════════════════════════════════ */
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  background: #050505;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  transition: opacity 1.2s ease;
+}
+
+#loading-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Horizontal layout: line — ENTER — line */
+.enter-layout {
+  display: flex;
+  align-items: center;
+  width: min(68vw, 620px);
+}
+
+.enter-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.enter-btn {
+  font-family: var(--font-nav);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.6em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 38px;
+  white-space: nowrap;
+  pointer-events: all;
+  transition: color 0.35s ease, text-shadow 0.35s ease;
+  outline: none;
+}
+
+.enter-btn:hover {
+  color: rgba(255, 255, 255, 1.0);
+  text-shadow:
+    0 0 16px rgba(255, 255, 255, 0.65),
+    0 0 48px rgba(192, 57, 43, 0.45);
+}
+
+.enter-btn:focus-visible {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE ADJUSTMENTS
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  :root {
+    --ui-padding: var(--ui-padding-mobile);
+  }
+
+  /* Mute sits on the SAME baseline as the social links (bottom-left) */
+  .ui-bottom-right {
+    bottom: 22px;
+  }
+
+  #craft-text {
+    font-size: clamp(40px, 12vw, 80px);
+    right: 5%;
+    top: 25%;
+    letter-spacing: 0.2em;
+  }
+
+  .social-links {
+    gap: 16px;
+  }
+
+  #final-text {
+    font-size: clamp(13px, 4.2vw, 30px);
+    white-space: nowrap;
+    width: max-content;
+    max-width: 98vw;
+    text-align: center;
+  }
+
+  #scroll-hint {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+  }
+
+  .project-card {
+    width: clamp(180px, 50vw, 240px);
+  }
+  .card-inner {
+    padding: 12px 12px 16px;
+  }
+  .card-tag { width: 78px; height: 78px; top: -12px; right: -12px; font-size: 9px; }
+  .tech-badge { padding: 5px 9px; }
+  .tech-badge b { font-size: 8px; letter-spacing: 0.14em; }
+  .tech-badge i { font-size: 7px; }
+  .tech-badge.tb-1 { top: -12px;  left: 6%; }
+  .tech-badge.tb-2 { top: 28%;    right: -18px; }
+  .tech-badge.tb-3 { bottom: 22%; left: -18px; }
+  .tech-badge.tb-4 { top: 60%;    right: -18px; }
+  .sat-metric {
+    top: auto; bottom: -34px; right: -38px;
+    min-width: 80px; padding: 6px 8px; gap: 4px;
+    border-radius: 9px;
+    transform: translateZ(60px) scale(0.8);
+    transform-origin: bottom right;
+  }
+  .sat-label  { font-size: 8px; letter-spacing: 0.16em; }
+  .sat-foot   { font-size: 8px; }
+  .sat-glyph  { font-size: 16px; }
+  .card-title { font-size: 13px; }
+  .card-desc  { font-size: 9px; }
+  .title-card { min-width: 110px; bottom: -28px; left: -16px; padding: 8px 10px; }
+
+  /* Night-sky constellation: shrink + recenter so every brand name fits and
+     the closing statement stays fully on-screen. */
+  .brand-star {
+    font-size: clamp(11px, 3vw, 15px) !important;   /* beats inline sizes */
+    max-width: 80vw;
+  }
+
+  .brand-statement {
+    right: 50%;
+    bottom: 10%;
+    transform: translateX(50%);
+    width: 88vw;
+    text-align: center;
+    font-size: clamp(12px, 3.6vw, 17px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CURSOR CUSTOMIZATION
+   Subtle custom cursor to match aesthetic
+   ═══════════════════════════════════════════════════════════════ */
+body {
+  cursor: crosshair;      /* Fallback for touch / no custom cursor */
+}
+
+.btn-talk,
+.btn-mute,
+.social-link {
+  cursor: pointer;        /* Revert to pointer for clickable elements */
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CUSTOM GLOWING CURSOR
+   Dot tracks the pointer; ring trails with lag and grows on hover.
+   ═══════════════════════════════════════════════════════════════ */
+body.has-custom-cursor,
+body.has-custom-cursor * {
+  cursor: none !important;   /* hide native cursor everywhere when active */
+}
+
+#cursor-dot,
+#cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  border-radius: 50%;
+  opacity: 0;                /* shown once the custom cursor is active */
+  will-change: transform;
+}
+
+body.has-custom-cursor #cursor-dot,
+body.has-custom-cursor #cursor-ring {
+  opacity: 1;
+}
+
+#cursor-dot {
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  box-shadow:
+    0 0 8px  rgba(255, 255, 255, 0.95),
+    0 0 18px rgba(255, 255, 255, 0.6),
+    0 0 40px rgba(255, 255, 255, 0.35);
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+#cursor-ring {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.25),
+    inset 0 0 12px rgba(255, 255, 255, 0.12);
+  transition:
+    width 0.25s ease,
+    height 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease;
+}
+
+/* Hover state — ring expands + brightens, dot shrinks to a focused point */
+body.cursor-hover #cursor-ring {
+  width: 56px;
+  height: 56px;
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 22px rgba(255, 255, 255, 0.4),
+    inset 0 0 18px rgba(255, 255, 255, 0.18);
+}
+
+body.cursor-hover #cursor-dot {
+  width: 4px;
+  height: 4px;
+}
+
+/* Interactive elements lift toward white while hovered */
+.is-hovered {
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SELECTION COLOR
+   ═══════════════════════════════════════════════════════════════ */
+::selection {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMET CURSOR TRAIL
+   8 ghost dots that chain-lerp behind the cursor — comet-like tail.
+   Hidden by default; visible only when has-custom-cursor is active.
+   Size and opacity set via CSS custom properties from CursorFollower.js.
+   ═══════════════════════════════════════════════════════════════ */
+.cursor-comet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  width:  var(--comet-size, 2px);
+  height: var(--comet-size, 2px);
+  background: rgba(190, 225, 255, 0.85);
+  box-shadow:
+    0 0 8px  rgba(160, 215, 255, 0.6),
+    0 0 18px rgba(120, 195, 255, 0.3),
+    0 0 34px rgba(90, 175, 255, 0.15);
+  /* Visible the WHOLE time (enter screen AND the scroll experience) so a
+     literal comet tail always streaks behind the cursor. */
+  opacity: var(--comet-opacity, 0.3);
+  will-change: transform;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPING EFFECT TARGET — monospace + heavy terminal glow
+   Applied to paragraph/subtitle elements (not Cinzel display headers).
+   ═══════════════════════════════════════════════════════════════ */
+.type-target {
+  font-family: var(--font-mono) !important;
+}
+
+.type-target .char,
+.char {
+  display: inline-block;
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.85),
+    0 0 28px rgba(255, 255, 255, 0.5),
+    0 0 60px rgba(255, 255, 255, 0.25);
+  /* Glowy + glitchy soft-mist motion. Animates filter/shadow/transform ONLY —
+     never opacity — so the GSAP type-in reveal (opacity) is untouched. */
+  animation: charFlux 3.4s ease-in-out infinite;
+  will-change: filter, transform;
+}
+/* Lock-in / step / award / final: static glow — NO mist/blur/glitch animation.
+   The charFlux blur+jitter was what made these letters read foggy/glitchy.
+   Matches the crisp night-sky brand text. */
+#lockin-text .char,
+#step-text .char,
+.award-line .char,
+#final-text .char,
+#craft-text .char {
+  animation: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+#craft-text .char {
+  color: #e8c84a !important;
+  text-shadow:
+    0 0 6px  rgba(232, 185, 35, 1.0),
+    0 0 18px rgba(220, 160, 20, 0.85),
+    0 0 45px rgba(200, 130, 10, 0.55),
+    0 0 90px rgba(180, 100, 0,  0.30),
+    0 2px 6px rgba(0, 0, 0, 0.9) !important;
+}
+/* step + award: warm night-sky glow */
+#step-text .char,
+.award-line .char {
+  text-shadow:
+    0 0 8px  rgba(255, 168, 48, 0.85),
+    0 0 22px rgba(255, 130, 10, 0.45),
+    0 0 50px rgba(255, 100, 0,  0.20) !important;
+}
+/* lock-in + final base ("Ready when it"): clean WHITE glow */
+#lockin-text .char,
+#final-text .char {
+  color: #ffffff;
+  text-shadow:
+    0 0 8px  rgba(255, 255, 255, 0.9),
+    0 0 22px rgba(255, 255, 255, 0.5),
+    0 0 50px rgba(255, 255, 255, 0.25) !important;
+}
+/* final "matters" → God of War gold (last word only; chars nested in .word spans) */
+#final-text .word:last-of-type .char:not(:nth-last-child(1)) {
+  color: #e8b923;
+  text-shadow:
+    0 0 8px  rgba(232, 185, 35, 0.95),
+    0 0 22px rgba(212, 160, 20, 0.6),
+    0 0 55px rgba(190, 130, 10, 0.32) !important;
+}
+/* Scroll-hint + Creative Hobbist: steady, NO flicker/mist animation (keep a
+   static dark-contrast glow so they still pop). */
+#phase1-text .char {
+  animation: none !important;
+  filter: none !important;
+  transform: none !important;
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.92),
+    0 0 3px  rgba(0, 0, 0, 0.96),
+    0 0 12px rgba(255, 255, 255, 0.82),
+    0 0 30px rgba(255, 255, 255, 0.46),
+    0 0 70px rgba(255, 255, 255, 0.24);
+}
+
+/* Desync the chars so the mist/glitch shimmers across the line, not in lockstep */
+.char:nth-child(3n)   { animation-delay: -0.7s; }
+.char:nth-child(3n+1) { animation-delay: -1.5s; }
+.char:nth-child(5n)   { animation-delay: -2.3s; }
+
+@keyframes charFlux {
+  0%, 100% {
+    filter: blur(0.25px);
+    transform: translate(0, 0);
+    text-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.95),          /* dark contrast outline → pops off bg */
+      0 0 2px  rgba(0, 0, 0, 0.98),
+      0 0 9px  rgba(255, 255, 255, 0.85),
+      0 0 26px rgba(180, 220, 255, 0.5),
+      0 0 60px rgba(150, 205, 255, 0.25);
+  }
+  48% {
+    filter: blur(1.0px);
+    text-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.95),
+      0 0 2px  rgba(0, 0, 0, 0.98),
+      0 0 13px rgba(255, 255, 255, 1.0),
+      0 0 36px rgba(165, 215, 255, 0.65),
+      0 0 84px rgba(140, 200, 255, 0.34);
+  }
+  /* brief glitch jitter */
+  91% { transform: translate(0, 0); filter: blur(0.4px); }
+  92% { transform: translate(-1.3px, 0.4px); }
+  94% { transform: translate(1.1px, -0.3px); }
+  96% { transform: translate(-0.6px, 0.2px); }
+  97% { transform: translate(0, 0); }
+}
+
+/* CRAFT: blinking highlight — glow pulses bright↔dim (text-shadow only, so the
+   GSAP reveal opacity is untouched). Dark contrast layer stays for legibility. */
+#craft-text {
+  animation: craftBlink 1.5s ease-in-out infinite;
+  will-change: text-shadow;
+}
+
+@keyframes craftBlink {
+  0%, 100% {
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.9),
+      0 0 3px  rgba(0, 0, 0, 0.95),
+      0 0 6px  rgba(255, 255, 255, 0.4),
+      0 0 16px rgba(255, 255, 255, 0.22);
+  }
+  50% {
+    color: #ffffff;
+    text-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.9),
+      0 0 3px   rgba(0, 0, 0, 0.95),
+      0 0 12px  rgba(255, 255, 255, 1.0),
+      0 0 30px  rgba(255, 255, 255, 0.7),
+      0 0 70px  rgba(255, 255, 255, 0.4),
+      0 0 140px rgba(200, 60, 40, 0.22);   /* warm outer flare */
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FILM GRAIN OVERLAY
+   Animated noise across the whole frame — gritty cinematic film look.
+   Sits above the scene + UI but never intercepts input.
+   ═══════════════════════════════════════════════════════════════ */
+.film-grain {
+  position: fixed;
+  inset: -50%;                /* oversize so background-position shifts don't reveal edges */
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grainShift 0.6s steps(3) infinite;
+}
+
+@keyframes grainShift {
+  0%   { transform: translate(0, 0); }
+  33%  { transform: translate(-6px, 4px); }
+  66%  { transform: translate(5px, -3px); }
+  100% { transform: translate(0, 0); }
+}

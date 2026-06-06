@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — Creative Technologist</title>
+  <meta name="description" content="Creative Technologist & WebGL Developer — Interactive experiences at the edge of art and code." />
+
+  <!-- Space Mono from Google Fonts — monospaced, techy, matches reference aesthetic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Raleway:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <script type="module" crossorigin src="/assets/index-mhNScC2c.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DyRgTrYn.css">
+</head>
+<body>
+
+  <!-- Custom glowing cursor (dot tracks pointer, ring trails) -->
+  <div id="cursor-ring" aria-hidden="true"></div>
+  <div id="cursor-dot" aria-hidden="true"></div>
+
+  <!-- WebGL canvas — fixed fullscreen, behind all UI -->
+  <canvas id="webgl"></canvas>
+
+  <!-- Film grain overlay — animated noise over the whole frame (film look) -->
+  <div class="film-grain" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       UI OVERLAY — fixed, non-interactive by default
+       pointer-events: none on container,
+       pointer-events: all on interactive children
+  ═══════════════════════════════════════════════ -->
+  <div class="ui-overlay">
+
+    <!-- TOP LEFT: Name / logo wordmark -->
+    <div class="ui-corner ui-top-left">
+      <span class="ui-label ui-name">Navaneeth KP</span>
+    </div>
+
+    <!-- TOP RIGHT: CTA button -->
+    <div class="ui-corner ui-top-right">
+      <button class="btn-talk ui-label" aria-label="Contact me">Let's Talk</button>
+    </div>
+
+    <!-- CENTER: Scroll hint — fades out as user scrolls -->
+    <div id="scroll-hint" class="ui-label" aria-live="polite">
+      Scroll to Explore
+    </div>
+
+    <!-- PHASE 1 text — fades in during terrain awakening -->
+    <div id="phase1-text" class="ui-phase-text ui-label type-target">
+      <span>Creative Hobbist</span>
+    </div>
+
+    <!-- BEFORE HAND: lock-in statement — slowly revealed on scroll -->
+    <div id="lockin-text" aria-hidden="true">Locks in fully when it's actually time to do the work</div>
+
+    <!-- PHASE 2: CRAFT — large display text, right side -->
+    <div id="craft-text" aria-hidden="true"><span class="first-letter">C</span>RAFT</div>
+
+    <!-- PHASE 3: Awards list — fades in during canyon -->
+    <div id="award-text" class="ui-award-block ui-label">
+      <span class="award-line">AI Enginner</span>
+      <span class="award-line">Cyber Specialist</span>
+      <span class="award-line">ML specialist</span>
+    </div>
+
+    <!-- PHASE 3: "Step into it." tagline -->
+    <div id="step-text" class="ui-phase-text ui-label type-target">
+      <span>Step on to it.</span>
+    </div>
+
+    <!-- PHASE 4: SKY — brand constellation revealed as the camera pans up -->
+    <div id="brands-sky" aria-hidden="true">
+      <span class="brand-star" style="top:18%; left:18%;">React + Next.js</span>
+      <span class="brand-star" style="top:13%; left:52%;">n8n</span>
+      <span class="brand-star" style="top:20%; left:80%;">Burp Suite</span>
+      <span class="brand-star" style="top:40%; left:30%;">DeepLabCut</span>
+      <span class="brand-star" style="top:38%; left:66%;">OpenCV</span>
+      <span class="brand-star" style="top:60%; left:22%;">TensorFlow</span>
+      <span class="brand-star" style="top:56%; left:74%;">Hugging Face</span>
+      <span class="brand-star" style="top:64%; left:50%;">spaCy</span>
+
+      <p class="brand-statement">
+        Agencies rely on me<br>
+        when the project matters most<br>
+        for the clients<br>
+        that can't afford ordinary.
+      </p>
+    </div>
+
+    <!-- BEAT 5: CARD CORRIDOR — project cards float in the dark centre while
+         the terrain re-forms duplicated + faded on the left and right -->
+    <div id="cards" aria-hidden="true">
+      <article class="project-card">
+        <span class="card-index">01</span>
+        <h3 class="card-title">PDF RAG System</h3>
+        <p class="card-desc">Immersive WebGL product reveal — particle terrain to hero frame.</p>
+      </article>
+      <article class="project-card">
+        <span class="card-index">02</span>
+        <h3 class="card-title">Person tracking system</h3>
+        <p class="card-desc">Scroll-driven brand story with GPU-shaded type and depth.</p>
+      </article>
+      <article class="project-card">
+        <span class="card-index">03</span>
+        <h3 class="card-title">Gold Market Prediction system</h3>
+        <p class="card-desc">Real-time light + grain campaign site, Awwwards SOTD.</p>
+      </article>
+    </div>
+
+    <!-- BEAT 6: Final statement -->
+    <div id="final-text">
+      Ready when it matters.
+    </div>
+
+    <!-- BOTTOM LEFT: Social links -->
+    <div class="ui-corner ui-bottom-left">
+      <nav class="social-links" aria-label="Social media links">
+        <a href="#" class="ui-label social-link" aria-label="LinkedIn">LinkedIn</a>
+        <a href="#" class="ui-label social-link" aria-label="Twitter">Twitter</a>
+        <a href="#" class="ui-label social-link" aria-label="Instagram">Instagram</a>
+      </nav>
+    </div>
+
+    <!-- BOTTOM RIGHT: Scroll progress bar + mute toggle -->
+    <div class="ui-corner ui-bottom-right">
+      <!-- Thin line progress bar — fill grows with scroll progress -->
+      <div id="scroll-progress" aria-hidden="true"><span id="scroll-progress-fill"></span></div>
+      <!-- Mute toggle button — boxed, larger icon -->
+      <button id="mute-toggle" class="ui-label btn-mute" aria-label="Mute audio">
+        <span id="mute-icon">◈</span>
+      </button>
+    </div>
+
+  </div><!-- /.ui-overlay -->
+
+  <!-- Main JS entry point — loaded as ES module -->
+
+  <!-- God of War style enter screen — overlays canvas until user clicks -->
+  <div id="loading-screen">
+    <div class="enter-layout">
+      <div class="enter-line"></div>
+      <button id="enter-btn" class="enter-btn" aria-label="Enter experience">ENTER IN</button>
+      <div class="enter-line"></div>
+    </div>
+  </div>
+
+</body>
+</html>

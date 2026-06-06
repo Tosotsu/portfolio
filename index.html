@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — Creative Technologist</title>
+  <meta name="description" content="Creative Technologist & WebGL Developer — Interactive experiences at the edge of art and code." />
+
+  <!-- Space Mono from Google Fonts — monospaced, techy, matches reference aesthetic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Raleway:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+
+  <!-- Custom glowing cursor (dot tracks pointer, ring trails) -->
+  <div id="cursor-ring" aria-hidden="true"></div>
+  <div id="cursor-dot" aria-hidden="true"></div>
+
+  <!-- WebGL canvas — fixed fullscreen, behind all UI -->
+  <canvas id="webgl"></canvas>
+
+  <!-- Film grain overlay — animated noise over the whole frame (film look) -->
+  <div class="film-grain" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       UI OVERLAY — fixed, non-interactive by default
+       pointer-events: none on container,
+       pointer-events: all on interactive children
+  ═══════════════════════════════════════════════ -->
+  <div class="ui-overlay">
+
+    <!-- TOP LEFT: Name / logo wordmark + progress bar below -->
+    <div class="ui-corner ui-top-left">
+      <span class="ui-label ui-name">Navaneeth KP</span>
+      <div id="scroll-progress" aria-hidden="true"><span id="scroll-progress-fill"></span></div>
+    </div>
+
+    <!-- TOP RIGHT: CTA button -->
+    <div class="ui-corner ui-top-right">
+      <button class="btn-talk ui-label" aria-label="Contact me">Let's Talk</button>
+    </div>
+
+    <!-- CENTER: Scroll hint — fades out as user scrolls -->
+    <div id="scroll-hint" class="ui-label" aria-live="polite">
+      Scroll to Explore
+    </div>
+
+    <!-- PHASE 1 text — fades in during terrain awakening -->
+    <div id="phase1-text" class="ui-phase-text ui-label type-target">
+      <span>Creative Hobbist</span>
+    </div>
+
+    <!-- BEFORE HAND: lock-in statement — slowly revealed on scroll -->
+    <div id="lockin-text" aria-hidden="true">I don’t just build with AI; <br>I distill ideas to their core <br>engineering feasible, sustainable solutions <br>that fit the user</div>
+
+    <!-- PHASE 2: CRAFT — large display text, right side -->
+    <div id="craft-text" aria-hidden="true"><span class="first-letter">I</span>DEAS</div>
+
+    <!-- PHASE 3: Awards list — fades in during canyon -->
+    <div id="award-text" class="ui-award-block ui-label">
+      <span class="award-line">Deep Learning</span>
+      <span class="award-line">Computer Vision & NLP</span>
+      <span class="award-line">Data Science & Analytics</span>
+    </div>
+
+    <!-- PHASE 3: "Step into it." tagline -->
+    <div id="step-text" class="ui-phase-text ui-label type-target">
+      <span>Step on to it.</span>
+    </div>
+
+    <!-- PHASE 4: SKY — brand constellation revealed as the camera pans up -->
+    <div id="brands-sky" aria-hidden="true">
+      <span class="brand-star" style="top:18%; left:18%;">React + Next.js</span>
+      <span class="brand-star" style="top:13%; left:52%;">n8n</span>
+      <span class="brand-star" style="top:20%; left:80%;">Burp Suite</span>
+      <span class="brand-star" style="top:40%; left:30%;">DeepLabCut</span>
+      <span class="brand-star" style="top:38%; left:66%;">OpenCV</span>
+      <span class="brand-star" style="top:60%; left:22%;">TensorFlow</span>
+      <span class="brand-star" style="top:56%; left:74%;">Hugging Face</span>
+      <span class="brand-star" style="top:64%; left:50%;">spaCy</span>
+
+      <p class="brand-statement">
+        I don't follow the path; <br> I define the architecture.<br>
+         Taking raw ideas to their limit,<br>
+         I build functional systems that<br>
+         operate exactly the way you do.
+      </p>
+    </div>
+
+    <!-- BEAT 5: CARD CORRIDOR — project cards float in the dark centre while
+         the terrain re-forms duplicated + faded on the left and right.
+         Each card: top-tag · hero animation · title/subtitle · badge · 2 satellite mini-cards. -->
+    <div id="cards" aria-hidden="true">
+
+      <!-- 01 — PDF RAG / Taxon AML Quiz -->
+      <article class="project-card" data-project="rag" data-href="https://github.com/Tosotsu/Aml_quiz" style="--card-accent:#ffb43a;">
+        <div class="card-inner">
+          <div class="card-hero">
+            <video class="hero-video" autoplay muted loop playsinline preload="metadata">
+              <source src="/videos/rag.mp4"  type="video/mp4">
+              <source src="/videos/rag.webm" type="video/webm">
+            </video>
+          </div>
+          <span class="card-tag">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 3 H15 L19 7 V21 H7 Z"/>
+              <path d="M15 3 V7 H19"/>
+              <path d="M10 12 H16 M10 16 H14"/>
+            </svg>
+            <span class="tag-label">AI · RAG</span>
+          </span>
+          <div class="title-card">
+            <span class="card-index">01</span>
+            <h3 class="card-title">AML Quizzes</h3>
+            <p class="card-desc">PDFs → Quizzes</p>
+          </div>
+          <span class="tech-badge tb-1"><span class="dot"></span><b>FastAPI</b><i>server</i></span>
+          <span class="tech-badge tb-2"><span class="dot"></span><b>Supabase</b><i>linked</i></span>
+          <span class="tech-badge tb-3"><span class="dot"></span><b>Together AI</b><i>llm</i></span>
+          <aside class="sat-metric">
+            <span class="sat-label">RAG <em>→</em></span>
+            <div class="sat-glyph">⌬</div>
+            <span class="sat-foot">Source-Grounded</span>
+          </aside>
+        </div>
+      </article>
+
+      <!-- 02 — P-Tracker -->
+      <article class="project-card" data-project="ptrack" data-href="https://github.com/Tosotsu/VVVVVVV" style="--card-accent:#00e5ff;">
+        <div class="card-inner">
+          <div class="card-hero">
+            <video class="hero-video" autoplay muted loop playsinline preload="metadata">
+              <source src="/videos/ptrack.mp4"  type="video/mp4">
+              <source src="/videos/ptrack.webm" type="video/webm">
+            </video>
+          </div>
+          <span class="card-tag">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12 C5 6 9 4 12 4 C15 4 19 6 22 12 C19 18 15 20 12 20 C9 20 5 18 2 12 Z"/>
+              <circle cx="12" cy="12" r="3.2"/>
+            </svg>
+            <span class="tag-label">Computer Vision</span>
+          </span>
+          <div class="title-card">
+            <span class="card-index">02</span>
+            <h3 class="card-title">P-Tracker</h3>
+            <p class="card-desc">Automated attendance + multi-cam tracking.</p>
+          </div>
+          <span class="tech-badge tb-1"><span class="dot"></span><b>YOLOv8</b><i>certified</i></span>
+          <span class="tech-badge tb-2"><span class="dot"></span><b>OpenCV</b><i>cv pipeline</i></span>
+          <span class="tech-badge tb-3"><span class="dot"></span><b>Python</b><i>3.11</i></span>
+          <span class="tech-badge tb-4"><span class="dot"></span><b>Location</b><i>live share</i></span>
+          <aside class="sat-metric">
+            <span class="sat-label">Cameras <em>→</em></span>
+            <div class="sat-glyph">◉</div>
+            <span class="sat-foot">Multi-Cam Mesh</span>
+          </aside>
+        </div>
+      </article>
+
+      <!-- 03 — Gold Predictor -->
+      <article class="project-card" data-project="gold" data-href="https://github.com/Tosotsu/Gold" style="--card-accent:#d62246;">
+        <div class="card-inner">
+          <div class="card-hero">
+            <video class="hero-video" autoplay muted loop playsinline preload="metadata">
+              <source src="/videos/gold.mp4"  type="video/mp4">
+              <source src="/videos/gold.webm" type="video/webm">
+            </video>
+          </div>
+          <span class="card-tag">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 17 L9 11 L13 14 L21 5"/>
+              <path d="M15 5 L21 5 L21 11"/>
+            </svg>
+            <span class="tag-label">LSTM · Forecast</span>
+          </span>
+          <div class="title-card">
+            <span class="card-index">03</span>
+            <h3 class="card-title">Gold Predictor</h3>
+            <p class="card-desc">LSTM forecast + trade signals.</p>
+          </div>
+          <span class="tech-badge tb-1"><span class="dot"></span><b>TensorFlow</b><i>2.x</i></span>
+          <span class="tech-badge tb-2"><span class="dot"></span><b>Pandas</b><i>dataframe</i></span>
+          <span class="tech-badge tb-3"><span class="dot"></span><b>NumPy</b><i>tensors</i></span>
+          <span class="tech-badge tb-4"><span class="dot"></span><b>MetaTrader</b><i>trade api</i></span>
+          <aside class="sat-metric">
+            <span class="sat-label">Signal <em>→</em></span>
+            <div class="sat-glyph">↗</div>
+            <span class="sat-foot">Forecast +</span>
+          </aside>
+        </div>
+      </article>
+
+      <!-- 04 — Hybrid Phishing Defense -->
+      <article class="project-card" data-project="phish" data-href="https://github.com/Tosotsu/Phissss" style="--card-accent:#39ff14;">
+        <div class="card-inner">
+          <div class="card-hero">
+            <video class="hero-video" autoplay muted loop playsinline preload="metadata">
+              <source src="/videos/phish.mp4"  type="video/mp4">
+              <source src="/videos/phish.webm" type="video/webm">
+            </video>
+          </div>
+          <span class="card-tag">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z"/>
+              <path d="M9 12 L11 14 L15 10"/>
+            </svg>
+            <span class="tag-label">AI · Security</span>
+          </span>
+          <div class="title-card">
+            <span class="card-index">04</span>
+            <h3 class="card-title">Phishing Defense</h3>
+            <p class="card-desc">AI detection + Blockchain ledger.</p>
+          </div>
+          <span class="tech-badge tb-1"><span class="dot"></span><b>TensorFlow</b><i>model</i></span>
+          <span class="tech-badge tb-2"><span class="dot"></span><b>Flask</b><i>api</i></span>
+          <span class="tech-badge tb-3"><span class="dot"></span><b>Solidity</b><i>contract</i></span>
+          <span class="tech-badge tb-4"><span class="dot"></span><svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="7" height="7" rx="1"/><rect x="14" y="9" width="7" height="7" rx="1"/><path d="M10 12.5 H14"/></svg><b>Blockchain</b><i>ledger</i></span>
+          <aside class="sat-metric">
+            <span class="sat-label">Layer <em>→</em></span>
+            <div class="sat-glyph">⛨</div>
+            <span class="sat-foot">Web3 / AI</span>
+          </aside>
+        </div>
+      </article>
+
+      <!-- 05 — Fresherman -->
+      <article class="project-card" data-project="vault" data-href="https://github.com/Tosotsu/Fresherman" style="--card-accent:#9d4edd;">
+        <div class="card-inner">
+          <div class="card-hero">
+            <video class="hero-video" autoplay muted loop playsinline preload="metadata">
+              <source src="/videos/vault.mp4"  type="video/mp4">
+              <source src="/videos/vault.webm" type="video/webm">
+            </video>
+          </div>
+          <span class="card-tag">
+            <svg class="tag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11 V7 A4 4 0 0 1 16 7 V11"/>
+            </svg>
+            <span class="tag-label">Auth · Vault</span>
+          </span>
+          <div class="title-card">
+            <span class="card-index">05</span>
+            <h3 class="card-title">Fresherman</h3>
+            <p class="card-desc">Private vault for personal docs.</p>
+          </div>
+          <span class="tech-badge tb-1"><span class="dot"></span><b>React</b><i>ssr</i></span>
+          <span class="tech-badge tb-2"><span class="dot"></span><b>TypeScript</b><i>typed</i></span>
+          <span class="tech-badge tb-3"><span class="dot"></span><b>Supabase</b><i>auth</i></span>
+          <aside class="sat-metric">
+            <span class="sat-label">Sealed <em>→</em></span>
+            <div class="sat-glyph">⊞</div>
+            <span class="sat-foot">Encrypted</span>
+          </aside>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- BEAT 6: Final statement -->
+    <div id="final-text">
+      Ready when it matters.
+    </div>
+
+    <!-- BOTTOM LEFT: Social links -->
+    <div class="ui-corner ui-bottom-left">
+      <nav class="social-links" aria-label="Social media links">
+        <a href="#" class="ui-label social-link" aria-label="LinkedIn">LinkedIn</a>
+        <a href="https://github.com/Tosotsu" class="ui-label social-link" aria-label="GitHub">GitHub</a>
+        <a href="https://www.instagram.com/jalabulajangujala" class="ui-label social-link" aria-label="Instagram">Instagram</a>
+      </nav>
+    </div>
+
+    <!-- BOTTOM RIGHT: Mute toggle -->
+    <div class="ui-corner ui-bottom-right">
+      <button id="mute-toggle" class="ui-label btn-mute" aria-label="Mute audio">
+        <span id="mute-icon">◈</span>
+      </button>
+    </div>
+
+  </div><!-- /.ui-overlay -->
+
+  <!-- Main JS entry point — loaded as ES module -->
+  <script type="module" src="/src/main.js"></script>
+
+  <!-- God of War style enter screen — overlays canvas until user clicks -->
+  <div id="loading-screen">
+    <div class="enter-layout">
+      <div class="enter-line"></div>
+      <button id="enter-btn" class="enter-btn" aria-label="Enter experience">ENTER IN</button>
+      <div class="enter-line"></div>
+    </div>
+  </div>
+
+</body>
+</html>
