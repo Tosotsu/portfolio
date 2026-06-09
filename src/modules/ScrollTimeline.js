@@ -31,7 +31,7 @@ const P_UNRAVEL_END = 0.16;   // unravel    0.08→0.16  (start is brief now)
 const P_HAND_END    = 0.30;   // hand       0.16→0.30
 const P_ROT_END     = 0.42;   // rotate     0.30→0.42
 const P_SKY_END     = 0.72;   // night sky  0.42→0.72 (LONG — text fully readable)
-const P_CARDS_END   = 0.90;   // cards      0.72→0.90; void 0.90→1.0
+const P_CARDS_END   = 0.94;   // cards      0.72→0.94; void 0.94→1.0
 
 // Camera dolly-back factor. FOV dropped 60→42 (~1.5× tele), so push the
 // camera back along its view direction by the same factor → identical framing
@@ -209,7 +209,11 @@ export function initScrollTimeline(uniforms, cameraBase, lookAtTarget, cameraUp,
     // The night-sky TEXT itself sinks DOWN + dissolves into the forming terrain
     // (it morphs into the ground — the hand model is NOT involved here).
     .to(brandsSky, { opacity: 0, y: 420, filter: 'blur(12px)', scale: 0.9, duration: (P_CARDS_END - P_SKY_END) * 0.3, ease: 'power2.in' }, P_SKY_END)
-    .to(cardsWrap, { opacity: 1, duration: 0.01 }, P_SKY_END + (P_CARDS_END - P_SKY_END) * 0.3)
+    // Cards wrapper must be visible BEFORE the first card starts animating.
+    // Old position was P_SKY_END + 0.3*span = 0.786 — after card 1 already
+    // started at 0.733. Now it fades in immediately at P_SKY_END so the
+    // container is ready when card animations begin.
+    .to(cardsWrap, { opacity: 1, duration: 0.01 }, P_SKY_END + 0.01)
 
     // BEAT 6 — void: terrain (incl. blue card bands) fully gone, white floaters
     // Cards clear, then the terrain dissolves SLOWLY into the void (unrushed) —
@@ -277,11 +281,25 @@ export function initScrollTimeline(uniforms, cameraBase, lookAtTarget, cameraUp,
   // cards — ONE AT A TIME: slow fade in → text TYPES OUT char-by-char → hold →
   // slow fade out. Plenty of dwell time on each card.
   {
-    // Start cards only AFTER the terrain morph has fully completed so card 01
-    // reveals on fully-rendered terrain, never a half-built one.
-    const cardsStart = P_SKY_END + (P_CARDS_END - P_SKY_END) * 0.20;
-    const cardsSpan  = (P_CARDS_END - 0.01) - cardsStart;
+    // Start cards AFTER the terrain morph + cardsWrap fade-in have completed.
+    // The morph takes ~30% of the sky→cards span. We start cards at 35% so
+    // card 01 appears on a fully-rendered terrain with the wrapper already
+    // visible — fixing the bug where card 1 was invisible.
+    const MORPH_BUFFER = 0.35; // fraction of card-section span to wait
+    const cardsStart = P_SKY_END + (P_CARDS_END - P_SKY_END) * MORPH_BUFFER;
+    const cardsEnd   = P_CARDS_END - 0.01; // leave a tiny gap before void
+    const cardsSpan  = cardsEnd - cardsStart;
     const per        = cardsSpan / cards.length;     // scroll window per card
+
+    // Each card's scroll budget is split:
+    //   0%  → 25%  : slide IN  (fade + translate)
+    //   15% → 25%  : title/desc type-in finishes
+    //   25% → 80%  : HOLD — card fully readable (~55% of per = ~4s at normal scroll)
+    //   80% → 100% : slide OUT (fade + translate)
+    const ENTER_FRAC = 0.25;   // entrance animation fraction
+    const EXIT_START = 0.80;   // when exit begins
+    const EXIT_FRAC  = 1.0 - EXIT_START;  // exit animation fraction
+
     // Cards enter AND exit from the SAME side (alternating L/R per card). The
     // exit overlaps the next card's entrance — as one card slides back out, the
     // next is already sliding in. Wide span + long eased tweens = slow & smooth.
@@ -294,19 +312,23 @@ export function initScrollTimeline(uniforms, cameraBase, lookAtTarget, cameraUp,
       desc  && desc.classList.add('type-target');
       const side  = (i % 2 === 0) ?  SWEEP : -SWEEP;   // same side for enter + exit
       const inner = card.querySelector('.card-inner');
+
+      // ENTER: slide in + fade up
       masterTimeline
         .fromTo(card,
           { opacity: 0, x: side, scale: 0.62 },
-          { opacity: 1, x: 0,    scale: 1.0,  duration: per * 0.40, ease: 'power2.out' }, at)
-        .set(inner, { pointerEvents: 'auto' }, at + per * 0.40)
-        .set(inner, { pointerEvents: 'none' }, at + per * 0.66);
-      typeIn(title, at + per * 0.22, per * 0.26);
-      typeIn(desc,  at + per * 0.42, per * 0.34);
-      // exit: slide back out the SAME side, receding. Runs LONG (past next card's
-      // start at +per) so the outgoing card is still leaving as the next arrives.
+          { opacity: 1, x: 0,    scale: 1.0,  duration: per * ENTER_FRAC, ease: 'power2.out' }, at)
+        .set(inner, { pointerEvents: 'auto' }, at + per * ENTER_FRAC)
+        .set(inner, { pointerEvents: 'none' }, at + per * EXIT_START);
+
+      // Type-in: title and description type out during entrance
+      typeIn(title, at, per * ENTER_FRAC);
+      typeIn(desc,  at + per * 0.05, per * (ENTER_FRAC - 0.05));
+
+      // EXIT: slide back out the SAME side after the long hold
       masterTimeline.to(card,
-        { opacity: 0, x: side, scale: 0.62, duration: per * 0.44, ease: 'power2.in' },
-        at + per * 0.66);
+        { opacity: 0, x: side, scale: 0.62, duration: per * EXIT_FRAC, ease: 'power2.in' },
+        at + per * EXIT_START);
     });
 
     // Click any visible card → open GitHub repo in new tab
