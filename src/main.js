@@ -230,7 +230,22 @@ const audioManager = new AudioManager(
 
 // Preload (fetch + store raw bytes) but don't decode/play yet.
 // Decode happens on first user interaction (browser autoplay policy).
-audioManager.preload();
+const _preloadPromise = audioManager.preload();
+
+// ── READY GATE ───────────────────────────────────────────────
+// Both conditions must be true before ENTER IN is revealed:
+//   1. First WebGL frame rendered (scene is visually alive)
+//   2. Audio preload finished (or failed gracefully)
+let _firstFrameDone = false;
+let _audioReady     = false;
+
+function _checkLoadReady() {
+  if (!_firstFrameDone || !_audioReady) return;
+  enterBtn.textContent = 'ENTER IN';
+  enterBtn.classList.remove('enter-btn--loading');
+}
+
+_preloadPromise.then(() => { _audioReady = true; _checkLoadReady(); });
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -269,6 +284,13 @@ const scrollTimeline = initScrollTimeline(uniforms, cameraBase, lookAtTarget, ca
 // We add a tiny sinusoidal Y offset on top to make the scene feel alive.
 // _lastCameraY: stores the ScrollTrigger base Y so we can add drift on top.
 function tick() {
+  // Signal that the first frame has rendered — unblocks the ENTER button
+  // (once audio preload also resolves).
+  if (!_firstFrameDone) {
+    _firstFrameDone = true;
+    _checkLoadReady();
+  }
+
   const elapsedTime = clock.getElapsedTime();  // Seconds since start
 
   // ── UPDATE TIME UNIFORM ──────────────────────────────────
