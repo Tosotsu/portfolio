@@ -1285,6 +1285,19 @@ body.scene-ready {
   outline: none;
 }
 
+/* Loading state — dimmer, not clickable, pulses */
+.enter-btn--loading {
+  color: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  cursor: default;
+  animation: loadPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes loadPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.85; }
+}
+
 .enter-btn:hover {
   color: rgba(255, 255, 255, 1.0);
   text-shadow:
