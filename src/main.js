@@ -26,6 +26,16 @@ import { createStarField       } from './modules/StarField.js';
 gsap.registerPlugin(ScrollTrigger);
 
 // ═══════════════════════════════════════════════════════════════
+// DEVICE DETECTION
+// ═══════════════════════════════════════════════════════════════
+// pointer: coarse = touch device (phone/tablet). Used to tune render budget:
+// DPR capped at 1 on mobile (9x fewer pixels than 3x retina), FilmPass skipped.
+// Quality impact is negligible — screen is small, grain is invisible at 1x.
+const isMobile = window.matchMedia('(pointer: coarse)').matches;
+const MAX_DPR  = isMobile ? 1 : 2;
+
+
+// ═══════════════════════════════════════════════════════════════
 // THREE.JS CORE SETUP
 // ═══════════════════════════════════════════════════════════════
 
@@ -40,9 +50,9 @@ const renderer = new THREE.WebGLRenderer({
   powerPreference: 'high-performance',
 });
 
-// Cap pixel ratio at 2 — retina screens beyond 2x offer diminishing returns
-// but double the fill-rate cost (4x pixels at 2x DPR vs 2.25x DPR, etc.)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// Mobile: cap at 1 — on a 390px 3x screen this cuts pixel count 9x with zero visible loss.
+// Desktop: cap at 2 — diminishing returns beyond 2x.
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 // Pitch black — deep space atmosphere. CSS --bg also updated to #000000.
@@ -132,9 +142,9 @@ const bloomPass = new UnrealBloomPass(
 composer.addPass(bloomPass);
 
 // Film grain — heavy high-ISO grain for a gritty cinematic film look.
-// intensity 0.9: dirty moving grain over the whole frame.
+// Skipped on mobile: grain is invisible at 1x DPR on small screens, but costs a full render pass.
 const filmPass = new FilmPass(0.9);
-composer.addPass(filmPass);
+if (!isMobile) composer.addPass(filmPass);
 
 // Vignette — forcefully darkens corners, pushing the eye to the bright centre.
 // Operates in linear space (before OutputPass sRGB conversion) for accuracy.
@@ -246,6 +256,9 @@ function _checkLoadReady() {
 }
 
 _preloadPromise.then(() => { _audioReady = true; _checkLoadReady(); });
+
+// Fallback: if audio fetch stalls (slow mobile/tablet network), unblock after 5s
+setTimeout(() => { _audioReady = true; _checkLoadReady(); }, 5000);
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -386,7 +399,7 @@ function onResize() {
     renderer.setSize(w, h);
 
     // Update pixel ratio in case user dragged to a different monitor
-    const newDPR = Math.min(window.devicePixelRatio, 2);
+    const newDPR = Math.min(window.devicePixelRatio, MAX_DPR);
     renderer.setPixelRatio(newDPR);
 
     // Composer must match renderer size — bloom pass uses resolution internally
