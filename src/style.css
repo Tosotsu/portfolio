@@ -1243,6 +1243,7 @@ body.scene-ready {
   inset: 0;
   background: #050505;
   z-index: 200;
+  visibility: visible;
   display: flex;
   align-items: center;
   justify-content: center;
