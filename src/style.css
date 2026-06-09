@@ -1079,7 +1079,8 @@ body.scene-ready {
   letter-spacing: 0.22em;
   color: rgba(255, 255, 255, 0.78);
   text-decoration: none;
-  pointer-events: all;    /* Enable click on links */
+  pointer-events: all;
+  touch-action: manipulation; /* prevents accidental tap during scroll on mobile */
   transition: color 0.25s ease, text-shadow 0.25s ease;
   position: relative;
   text-shadow:
@@ -1135,6 +1136,88 @@ body.scene-ready {
   box-shadow:
     0 0 8px  rgba(255, 255, 255, 0.7),
     0 0 18px rgba(255, 255, 255, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO-SCROLL BUTTON (bottom right, left of mute)
+   Circle shape — contrasts with the square mute button
+   ═══════════════════════════════════════════════════════════════ */
+.btn-autoscroll {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0;
+  outline: none;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+
+#autoscroll-icon {
+  display: block;
+  line-height: 1;
+  letter-spacing: 0;
+  text-indent: 0;
+  text-align: center;
+  /* Play ▶ — God of War red glow */
+  font-size: 11px;
+  color: var(--accent-red);
+  text-shadow:
+    0 0 8px  rgba(192, 57, 43, 0.9),
+    0 0 20px rgba(192, 57, 43, 0.55),
+    0 0 40px rgba(192, 57, 43, 0.28);
+  /* ▶ unicode sits slightly left — nudge right optically */
+  transform: translateX(1px);
+}
+
+/* Stop ■ — same bounding box as ▶ triangle, red glow */
+.btn-autoscroll.is-playing #autoscroll-icon {
+  font-size: 15px;
+  color: var(--accent-red);
+  text-shadow:
+    0 0 8px  rgba(192, 57, 43, 0.9),
+    0 0 20px rgba(192, 57, 43, 0.55),
+    0 0 40px rgba(192, 57, 43, 0.28);
+  transform: translateX(0);
+}
+
+.btn-autoscroll:hover {
+  color: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 1);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 30px rgba(255, 255, 255, 0.55),
+    inset 0 0 18px rgba(255, 255, 255, 0.14);
+}
+
+.btn-autoscroll:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 3px;
+}
+
+.btn-autoscroll.is-playing {
+  border-color: rgba(255, 255, 255, 0.9);
+  animation: autoScrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes autoScrollPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2), inset 0 0 8px rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(255, 255, 255, 0.55), inset 0 0 16px rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 1);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1333,8 +1416,8 @@ body.scene-ready {
 
   #final-text {
     font-size: clamp(13px, 4.2vw, 30px);
-    white-space: nowrap;
-    width: max-content;
+    white-space: normal;
+    width: 90vw;
     max-width: 98vw;
     text-align: center;
   }
@@ -1342,6 +1425,12 @@ body.scene-ready {
   #scroll-hint {
     font-size: 10px;
     letter-spacing: 0.3em;
+  }
+
+  /* lockin-text: center horizontally on mobile (desktop offset was 65%) */
+  #lockin-text {
+    left: 50%;
+    width: min(92vw, 760px);
   }
 
   .project-card {
@@ -1375,7 +1464,7 @@ body.scene-ready {
   /* Night-sky constellation: shrink + recenter so every brand name fits and
      the closing statement stays fully on-screen. */
   .brand-star {
-    font-size: clamp(11px, 3vw, 15px) !important;   /* beats inline sizes */
+    font-size: clamp(11px, 3vw, 15px) !important;
     max-width: 80vw;
   }
 
@@ -1386,6 +1475,67 @@ body.scene-ready {
     width: 88vw;
     text-align: center;
     font-size: clamp(12px, 3.6vw, 17px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SMALL PHONE BREAKPOINT (≤480px — iPhone SE, Galaxy A-series)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  :root {
+    --ui-padding: 14px;
+  }
+
+  /* Wider cards on small screens — fill more of the viewport */
+  .project-card {
+    width: clamp(200px, 68vw, 260px);
+  }
+
+  /* Pull card satellites closer so they don't bleed past viewport edges */
+  .card-tag  { top: -8px; right: -8px; }
+  .title-card { bottom: -22px; left: -10px; }
+  .tech-badge.tb-2 { right: -12px; }
+  .tech-badge.tb-3 { left: -12px; }
+  .tech-badge.tb-4 { right: -12px; }
+  .sat-metric {
+    bottom: -28px; right: -18px;
+    transform: translateZ(60px) scale(0.72);
+  }
+
+  /* Tighter social link row for 320–480px viewports */
+  .social-links { gap: 10px; }
+  .social-link  { font-size: 10px; letter-spacing: 0.14em; }
+
+  /* Scroll hint */
+  #scroll-hint {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+  }
+
+  /* Enter screen: full-width layout on narrow phones */
+  .enter-layout { width: min(90vw, 620px); }
+  .enter-btn    { padding: 0 24px; font-size: 9px; letter-spacing: 0.5em; }
+
+  /* Display word — smaller on very narrow viewport */
+  #craft-text {
+    font-size: clamp(32px, 10vw, 52px);
+    right: 3%;
+  }
+
+  /* Award lines */
+  .award-line   { font-size: clamp(10px, 2.8vw, 13px); }
+
+  /* Brand statement */
+  .brand-statement {
+    width: 92vw;
+    font-size: clamp(10px, 3.2vw, 14px);
+  }
+
+  /* Final statement — allow wrap, no overflow */
+  #final-text {
+    font-size: clamp(11px, 3.8vw, 22px);
+    white-space: normal;
+    width: 88vw;
   }
 }
 
