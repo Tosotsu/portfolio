@@ -21,9 +21,8 @@ import { initScrollTimeline   } from './modules/ScrollTimeline.js';
 import { MouseTracker          } from './modules/MouseTracker.js';
 import { AudioManager          } from './modules/AudioManager.js';
 import { CursorFollower         } from './modules/CursorFollower.js';
+import { AutoScroller           } from './modules/AutoScroll.js';
 import { createStarField       } from './modules/StarField.js';
-
-gsap.registerPlugin(ScrollTrigger);
 
 // ═══════════════════════════════════════════════════════════════
 // DEVICE DETECTION
@@ -31,8 +30,20 @@ gsap.registerPlugin(ScrollTrigger);
 // pointer: coarse = touch device (phone/tablet). Used to tune render budget:
 // DPR capped at 1 on mobile (9x fewer pixels than 3x retina), FilmPass skipped.
 // Quality impact is negligible — screen is small, grain is invisible at 1x.
-const isMobile = window.matchMedia('(pointer: coarse)').matches;
+const isMobile = window.matchMedia('(pointer: coarse)').matches
+  || /Android|iPhone|iPad/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad iOS 13+
 const MAX_DPR  = isMobile ? 1 : 2;
+
+gsap.registerPlugin(ScrollTrigger);
+
+// Normalize scroll on mobile/tablet — stops iOS native momentum from fighting
+// GSAP ScrollTrigger and causing jumps/overshoots. ignoreMobileResize prevents
+// scroll position jumps when browser chrome appears/disappears.
+if (isMobile) {
+  ScrollTrigger.normalizeScroll(true);
+  ScrollTrigger.config({ ignoreMobileResize: true });
+}
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -179,6 +190,8 @@ composer.addPass(new OutputPass());
 // This is the most expensive initialization step (~50ms for 180K particles).
 const { points, uniforms, material } = createParticleSystem(renderer);
 
+if (isMobile) uniforms.uSize.value = 0.72;
+
 scene.add(points);
 
 // Static ambient star field — always visible overhead, no scroll dependency.
@@ -240,22 +253,18 @@ const audioManager = new AudioManager(
 
 // Preload (fetch + store raw bytes) but don't decode/play yet.
 // Decode happens on first user interaction (browser autoplay policy).
-const _preloadPromise = audioManager.preload();
+audioManager.preload();
 
 // ── READY GATE ───────────────────────────────────────────────
-// Both conditions must be true before ENTER IN is revealed:
-//   1. First WebGL frame rendered (scene is visually alive)
-//   2. Audio preload finished (or failed gracefully)
+// Unblocks once first WebGL frame renders. Audio preloads in background —
+// no need to wait for it since playback only starts on ENTER click.
 let _firstFrameDone = false;
-let _audioReady     = false;
 
 function _checkLoadReady() {
-  if (!_firstFrameDone || !_audioReady) return;
+  if (!_firstFrameDone) return;
   enterBtn.textContent = 'ENTER IN';
   enterBtn.classList.remove('enter-btn--loading');
 }
-
-_preloadPromise.then(() => { _audioReady = true; _checkLoadReady(); });
 
 // Fallback: if audio fetch stalls (slow mobile/tablet network), unblock after 5s
 setTimeout(() => { _audioReady = true; _checkLoadReady(); }, 5000);
@@ -273,7 +282,6 @@ const mouseTracker = new MouseTracker(uniforms);
 // Removed on ENTER click — only lives on the loading overlay.
 const cursorFollower = new CursorFollower();
 
-
 // ═══════════════════════════════════════════════════════════════
 // SCROLL TIMELINE
 // ═══════════════════════════════════════════════════════════════
@@ -286,6 +294,17 @@ if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.scrollTo(0, 0);
 
 const scrollTimeline = initScrollTimeline(uniforms, cameraBase, lookAtTarget, cameraUp, audioManager);
+
+// ═══════════════════════════════════════════════════════════════
+// AUTO-SCROLL (mobile-friendly cinematic playback)
+// ═══════════════════════════════════════════════════════════════
+// Must init AFTER scrollTimeline so we can pass masterTimeline reference.
+// AutoScroller drives masterTimeline directly (bypassing scrub:7 lag).
+const autoScroller = new AutoScroller(
+  document.getElementById('autoscroll-toggle'),
+  document.getElementById('autoscroll-icon'),
+  scrollTimeline,
+);
 
 
 // ═══════════════════════════════════════════════════════════════
