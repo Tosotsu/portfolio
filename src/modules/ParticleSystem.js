@@ -28,12 +28,9 @@ import fragmentShader from '../shaders/particle.frag.glsl?raw';
 // while phones read cleaner with fewer grains. Scale DOWN as the screen grows.
 export const PARTICLE_COUNT = (() => {
   if (typeof window === 'undefined') return 120_000;
-  const isMobileDevice = window.matchMedia('(pointer: coarse)').matches
-    || /Android|iPhone|iPad/i.test(navigator.userAgent)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (isMobileDevice) return 60_000;   // phones + tablets — GPU-limited, 60k still looks dense
   const w = Math.max(window.innerWidth, window.innerHeight); // longest edge
-  if (w < 1280) return 110_000;   // small laptops
+  if (w < 768)  return 55_000;    // phones — less dense = cleaner on small screens
+  if (w < 1280) return 110_000;   // tablets / small laptops
   if (w < 1920) return 130_000;   // standard desktop
   return 120_000;                 // large / 4K
 })();
