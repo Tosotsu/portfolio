@@ -66,10 +66,7 @@ body.scene-ready {
    ═══════════════════════════════════════════════════════════════ */
 .ui-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
+  inset: 0;        /* replaces top/left/width/height — fits true visual viewport on iOS */
   z-index: 10;
   /* None of the container receives mouse events — only
      specific children that need interaction get pointer-events: all */
