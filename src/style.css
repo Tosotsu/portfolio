@@ -114,12 +114,12 @@ body.scene-ready {
 }
 
 .ui-bottom-left {
-  bottom: 22px;
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
   left: var(--ui-padding);
 }
 
 .ui-bottom-right {
-  bottom: 22px;
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
   right: var(--ui-padding);
   gap: 16px;
 }
@@ -1243,7 +1243,7 @@ body.scene-ready {
   inset: 0;
   background: #050505;
   z-index: 200;
-  visibility: visible;
+  visibility: visible; /* override body { visibility: hidden } — loading screen must show immediately */
   display: flex;
   align-items: center;
   justify-content: center;
