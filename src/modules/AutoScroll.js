@@ -1,35 +1,30 @@
 import { gsap } from 'gsap';
 
 // ═══════════════════════════════════════════════════════════════
-// AUTO-SCROLL — uniform per-card cadence
-//
-// Card peak positions are computed DYNAMICALLY from the master
-// timeline's actual duration — no more hardcoded values that
-// drift when timeline tweens change the totalDuration.
+// AUTO-SCROLL
 // ═══════════════════════════════════════════════════════════════
 
-// Seconds to freeze on each fully-rendered card (reading time).
+// Total seconds for full scroll at normal speed (excluding dwells)
+const SCROLL_DURATION = 75;
+
+// Seconds to pause on each fully-rendered card
 const DWELL_SECS = 1.2;
-
-// Fixed seconds for the inter-card sweep.
-const SWEEP_DUR = 1.0;
-
-// Fixed seconds for the card entry slide-in.
-const ENTRY_DUR = 1.5;
-
-// Cap for the initial long sweep from page top → first card.
-const INTRO_SWEEP_MAX = 7;
-
-// Scroll distance before each peak where the entry slide-in begins.
-const ENTRY_LEAD = 0.008;
 
 // Cinematic scrub lag for manual scroll (mirrors ScrollTimeline.js scrub:7).
 const MANUAL_SCRUB = 7;
-// Near-zero scrub during autoscroll — virtually no lag between scroll and timeline.
-const AUTO_SCRUB = 0.01;
+// Tight scrub during autoscroll — timeline tracks the programmatic scroll
+// near-instantly so dwells land on the centered card with no settling lag.
+const AUTO_SCRUB = 0.2;
 
-// Final void scroll duration.
-const END_DUR = 2.0;
+// Scroll distance before each peak where the entry slide-in begins.
+// During entry, we scroll slower so the slide-in + type effect is visible.
+const ENTRY_LEAD = 0.015;
+
+// Forced minimum seconds for that entry segment so slide-in is always visible.
+const ENTRY_DUR = 1.1;
+
+// Cap any single sweep so the long intro doesn't take forever.
+const SWEEP_MAX = 8;
 
 // ── ScrollTimeline card-section constants (must match ScrollTimeline.js) ──
 const P_SKY_END    = 0.72;
@@ -48,22 +43,17 @@ export class AutoScroller {
     this.active = false;
 
     // ── Compute card peaks dynamically from the actual timeline ──
-    // GSAP's totalDuration is NOT 1.0 — it's determined by the last tween.
-    // The scroll fraction maps to timeline progress (0→1), which maps to
-    // time (0→totalDuration). Card tweens are placed at absolute time
-    // positions, so we must divide by totalDuration to get scroll fractions.
     const totalDur   = masterTimeline.duration();
     const cardsStart = P_SKY_END + (P_CARDS_END - P_SKY_END) * MORPH_BUFFER;
     const cardsEnd   = P_CARDS_END - 0.01;
     const cardsSpan  = cardsEnd - cardsStart;
     const per        = cardsSpan / NUM_CARDS;
-    const holdMid    = (ENTER_FRAC + EXIT_START) / 2;  // 0.525
+    const holdMid    = (ENTER_FRAC + EXIT_START) / 2;
 
     this.cardPeaks = [];
     for (let i = 0; i < NUM_CARDS; i++) {
       const at = cardsStart + i * per;
       const peakTime = at + per * holdMid;
-      // Convert timeline time → scroll fraction
       this.cardPeaks.push(peakTime / totalDur);
     }
 
@@ -98,45 +88,21 @@ export class AutoScroller {
 
     this._setScrub(AUTO_SCRUB);
 
-    // Build waypoints: for each card →
-    //   sweep (fast scroll to entry start) → entry (slow slide-in) → dwell (read)
-    // Every card gets the exact same entry + dwell duration.
+    // Build waypoints: for each card peak, insert a waypoint just before it
+    // to switch to 'entry' speed, then a waypoint AT the peak to freeze & dwell.
     const waypoints = [];
-    let isFirstCard = true;
-
-    for (const peak of this.cardPeaks) {
-      if (peak <= currentFrac + 0.001) continue;
-
-      const entryStart = peak - ENTRY_LEAD;
-
-      // Sweep: fast scroll to entry start
+    for (const p of this.cardPeaks) {
+      if (p <= currentFrac + 0.001) continue;
+      
+      const entryStart = p - ENTRY_LEAD;
       if (entryStart > currentFrac + 0.001) {
-        waypoints.push({
-          frac: entryStart,
-          kind: 'sweep',
-          dur:  isFirstCard ? INTRO_SWEEP_MAX : SWEEP_DUR,
-          ease: isFirstCard ? 'power1.inOut' : 'power1.out',
-        });
+        waypoints.push({ frac: entryStart, kind: 'sweep' });
       }
-
-      // Entry: slow eased slide-in to card center
-      waypoints.push({
-        frac: peak,
-        kind: 'entry',
-        dur:  ENTRY_DUR,
-        ease: 'power2.out',
-      });
-
-      isFirstCard = false;
+      waypoints.push({ frac: p, kind: 'entry' });
     }
-
-    // Final void section
-    waypoints.push({
-      frac: 1.0,
-      kind: 'end',
-      dur:  END_DUR,
-      ease: 'power1.in',
-    });
+    
+    // Add final void
+    waypoints.push({ frac: 1.0, kind: 'end' });
 
     this._tweenTo(currentFrac, waypoints, 0);
   }
@@ -152,36 +118,60 @@ export class AutoScroller {
   _tweenTo(fromFrac, waypoints, idx) {
     if (!this.active || idx >= waypoints.length) return;
 
-    const { frac: toFrac, kind, dur, ease } = waypoints[idx];
-    const max      = this.maxScroll;
-    const distance = toFrac - fromFrac;
+    const wp = waypoints[idx];
+    const { frac: toFrac, kind } = wp;
+    const max = this.maxScroll;
 
+    const distance = toFrac - fromFrac;
     if (distance <= 0.001) {
       this._tweenTo(toFrac, waypoints, idx + 1);
       return;
+    }
+
+    const base = distance * SCROLL_DURATION;
+    let duration, ease;
+
+    if (kind === 'entry') {
+      duration = Math.max(base, ENTRY_DUR);
+      ease     = 'power2.out';
+    } else if (kind === 'end') {
+      duration = Math.min(base, 3.0);
+      ease     = 'power1.in';
+    } else {
+      // Don't cap the sweep duration artificially (used to be capped at 8s),
+      // which caused long sections to fly by way too fast. 
+      // Let it take its natural time (distance * SCROLL_DURATION).
+      duration = base;
+      ease     = 'none';
     }
 
     const proxy = { f: fromFrac };
 
     this.tween = gsap.to(proxy, {
       f:        toFrac,
-      duration: dur,
+      duration,
       ease,
       onUpdate: () => { window.scrollTo(0, proxy.f * max); },
       onComplete: () => {
         if (!this.active) return;
         this.tween = null;
 
-        if (kind === 'end') { this._onComplete(); return; }
-        if (kind !== 'entry') { this._tweenTo(toFrac, waypoints, idx + 1); return; }
+        if (kind === 'end') {
+          this._onComplete();
+          return;
+        }
 
-        // Entry done → card centered. Dwell: freeze for reading.
-        // Every card gets the exact same DWELL_SECS.
-        this.tween = gsap.delayedCall(DWELL_SECS, () => {
-          if (!this.active) return;
-          this.tween = null;
+        if (kind === 'entry') {
+          // Reached card peak → freeze for DWELL_SECS
+          this.tween = gsap.delayedCall(DWELL_SECS, () => {
+            if (!this.active) return;
+            this.tween = null;
+            this._tweenTo(toFrac, waypoints, idx + 1);
+          });
+        } else {
+          // Reached sweep waypoint → immediately proceed
           this._tweenTo(toFrac, waypoints, idx + 1);
-        });
+        }
       },
     });
   }
@@ -202,6 +192,7 @@ export class AutoScroller {
       onUpdate: () => { window.scrollTo(0, proxy.f * max); },
       onComplete: () => {
         this._setScrub(MANUAL_SCRUB);
+        // show end hint
         const hint = document.getElementById('scroll-hint');
         if (hint) gsap.to(hint, { opacity: 1, duration: 1, delay: 0.4 });
       },
